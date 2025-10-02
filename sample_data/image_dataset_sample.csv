@@ -1,0 +1,11 @@
+image_id,image_path,label,description
+1, ,cat,"A cute orange cat sitting on a windowsill"
+2,images/dog1.jpg,dog,"A golden retriever playing in the park"
+3,images/cat2.jpg,cat,"A black and white cat sleeping on a couch"
+4,images/dog2.jpg,dog,"A small brown dog running in the garden"
+5,images/cat3.jpg,cat,"A gray cat looking out the window"
+6,images/dog3.jpg,dog,"A large black dog sitting patiently"
+7,images/cat4.jpg,cat,"A fluffy white cat playing with a ball"
+8,images/dog4.jpg,dog,"A happy dog with a stick in its mouth"
+9,images/cat5.jpg,cat,"A tabby cat stretching on the floor"
+10,images/dog5.jpg,dog,"A small dog wearing a red collar"

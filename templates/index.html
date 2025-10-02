@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoML Model Builder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --brand-1: #6366f1;
+            --brand-2: #8b5cf6;
+            --accent: #10b981;
+            --bg-1: #0f172a;
+            --bg-2: #111827;
+            --card: #0b1220;
+            --text: #e5e7eb;
+            --muted: #cbd5e1; /* lightened for better readability */
+            --muted-2: #a5b4fc;
+            --shadow: 0 20px 50px rgba(0,0,0,0.35);
+        }
+        html, body { height: 100%; }
+        body { 
+            font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(1200px 800px at 10% -10%, rgba(99,102,241,.2), transparent),
+                        radial-gradient(1200px 800px at 110% 10%, rgba(139,92,246,.18), transparent),
+                        linear-gradient(160deg, var(--bg-1), var(--bg-2));
+            color: var(--text);
+        }
+        .navbar { background: rgba(13,19,33,.65); backdrop-filter: blur(6px); border-bottom: 1px solid rgba(255,255,255,.06); }
+        .navbar-brand { color: #fff; font-weight: 700; letter-spacing: .3px; }
+        .navbar-brand span { color: var(--brand-1); }
+        .main-container { background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border: 1px solid rgba(255,255,255,.06); border-radius: 18px; margin: 2rem auto; padding: 2rem; box-shadow: var(--shadow); }
+        .header { text-align: center; margin-bottom: 2rem; }
+        .header h1 { color: #fff; font-weight: 700; }
+        .header p { color: var(--muted); }
+        .card { background: var(--card); border: 1px solid rgba(255,255,255,.06); border-radius: 16px; box-shadow: var(--shadow); color: var(--text); }
+        .card-header { background: linear-gradient(135deg, rgba(99,102,241,.18), rgba(139,92,246,.18)); color: #fff; border-bottom: 1px solid rgba(255,255,255,.08); border-radius: 16px 16px 0 0 !important; }
+        .card-body p, .card-body li { color: var(--text); }
+        .upload-area { border: 2px dashed rgba(99,102,241,.6); border-radius: 14px; padding: 2.2rem; text-align: center; cursor: pointer; color: var(--muted); transition: border-color .2s ease, background .2s ease; }
+        .upload-area:hover { border-color: var(--brand-1); background: rgba(99,102,241,.06); }
+        .metric-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 1rem; text-align: center; }
+        .metric-value { font-size: 1.4rem; font-weight: 700; color: #fff; }
+        .metric-label { color: var(--muted); font-size: .9rem; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand-1), var(--brand-2)); border: none; border-radius: 10px; box-shadow: 0 10px 25px rgba(99,102,241,.35); transition: transform .06s ease; }
+        .btn-primary:hover { transform: translateY(-1px); }
+        .btn-success { background: linear-gradient(135deg, var(--accent), #059669); border: none; border-radius: 10px; box-shadow: 0 10px 25px rgba(16,185,129,.3); transition: transform .06s ease; }
+        .btn-success:hover { transform: translateY(-1px); }
+        /* Dark table styling */
+        table.table { color: var(--text); background: transparent; }
+        table thead th { color: #dbeafe; border-color: rgba(255,255,255,.08) !important; background: rgba(255,255,255,.03); }
+        table tbody td { border-color: rgba(255,255,255,.05) !important; background: transparent; }
+        .table-hover tbody tr:hover { background: rgba(255,255,255,.04); }
+        .footer { color: var(--muted); font-size: .9rem; padding: 1.2rem 0; border-top: 1px solid rgba(255,255,255,.06); margin-top: 2rem; }
+        .badge-soft { background: rgba(99,102,241,.16); color: #c7d2fe; border: 1px solid rgba(99,102,241,.25); }
+        .fade-up { animation: fadeUp .4s ease both; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        /* Guide lists visibility */
+        .guide-list li { color: var(--text); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">Auto<span>ML</span> Builder</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-11">
+                <div class="main-container fade-up">
+                    <div class="header">
+                        <span class="badge badge-soft mb-2">No-code ML</span>
+                        <h1>Build, Compare, and Choose the Best Model</h1>
+                        <p>Upload data, train multiple models, and evaluate results with clarity.</p>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>📊 Dataset Upload & Analysis</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="upload-area" id="uploadArea">
+                                        <h4>📁 Upload your Dataset</h4>
+                                        <p class="text-muted">CSV files with image paths, or individual images</p>
+                                        <input type="file" id="fileInput" accept=".csv,.jpg,.jpeg,.png" style="display: none;">
+                                    </div>
+                                    
+                                    <div id="datasetInfo" style="display: none;">
+                                        <h6>Dataset Analysis:</h6>
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value" id="datasetShape">-</div>
+                                                    <div class="metric-label">Rows × Columns</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="metric-card">
+                                                    <div class="metric-value" id="taskType">-</div>
+                                                    <div class="metric-label">Task Type</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>🧠 Model Training</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="trainingSetup" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="targetColumn" class="form-label">Target Column:</label>
+                                            <select class="form-select" id="targetColumn">
+                                                <option value="">Select target column...</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn btn-success w-100" id="startTraining">
+                                            🚀 Start Training
+                                        </button>
+                                    </div>
+                                    
+                                    <div id="trainingProgress" style="display: none;">
+                                        <h6>Training Progress:</h6>
+                                        <div class="progress mb-3" style="height: 10px;">
+                                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <div id="trainingStatus">Initializing...</div>
+                                    </div>
+                                    
+                                    <div id="trainingComplete" style="display: none;">
+                                        <div class="alert alert-success">
+                                            ✅ Training Complete!
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5>🏆 Model Performance Comparison</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="resultsContent" style="display: none;">
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="metric-card">
+                                            <div class="metric-value" id="bestModel">-</div>
+                                            <div class="metric-label">Best Model</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="metric-value" id="bestScore">-</div>
+                                        <div class="metric-label">Best Score</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Model</th>
+                                                <th>Accuracy</th>
+                                                <th>Precision</th>
+                                                <th>Recall</th>
+                                                <th>F1-Score</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="modelTableBody"></tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h6>Performance Chart:</h6>
+                                    <div id="performanceChart"></div>
+                                </div>
+                            </div>
+                            
+                            <div id="noResults" class="text-center text-muted">
+                                <h5>📈 No Results Yet</h5>
+                                <p>Train some models first to see the comparison results.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>🔮 Live Predictions</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="predictionForm" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="predictionModel" class="form-label">Select Model:</label>
+                                            <select class="form-select" id="predictionModel">
+                                                <option value="best">Best Model (Recommended)</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div id="featureInputs"></div>
+                                        
+                                        <button class="btn btn-primary w-100" id="makePrediction">
+                                            🎯 Make Prediction
+                                        </button>
+                                    </div>
+                                    
+                                    <div id="predictionResult" style="display: none;"></div>
+                                    
+                                    <div id="noPredictionForm" class="text-center text-muted">
+                                        <h6>📤 Upload Dataset First</h6>
+                                        <p>You need to upload and train a dataset before making predictions.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>💡 Model Explanations</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="explanationContent" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="explanationModel" class="form-label">Select Model:</label>
+                                            <select class="form-select" id="explanationModel">
+                                                <option value="">Select a model...</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <button class="btn btn-primary w-100" id="getExplanations">
+                                            💡 Get Explanations
+                                        </button>
+                                        
+                                        <div id="explanationsResult" class="mt-3"></div>
+                                    </div>
+                                    
+                                    <div id="noExplanationContent" class="text-center text-muted">
+                                        <h6>🧠 No Models Available</h6>
+                                        <p>Train some models first to get explanations.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h5>📘 Model and Metric Guide</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">A quick reference to understand the algorithms we train and how we evaluate them.</p>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header"><strong>🤖 Common Models</strong></div>
+                                        <div class="card-body">
+                                            <ul class="mb-0 guide-list">
+                                                <li><strong>Logistic Regression</strong>: Linear classifier that estimates class probabilities; fast, interpretable baseline.</li>
+                                                <li><strong>Decision Tree</strong>: Rule-based splits that are easy to interpret; can overfit without pruning.</li>
+                                                <li><strong>Random Forest</strong>: Ensemble of trees; robust, handles non-linearities, reduces overfitting.</li>
+                                                <li><strong>XGBoost</strong>: Gradient-boosted trees; strong accuracy, handles complex patterns, good with tabular data.</li>
+                                                <li><strong>Support Vector Machine (SVM)</strong>: Finds optimal separating boundary; effective in high-dimensional spaces.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="card h-100">
+                                        <div class="card-header"><strong>📏 Classification Metrics</strong></div>
+                                        <div class="card-body">
+                                            <ul class="mb-0 guide-list">
+                                                <li><strong>Accuracy</strong>: Proportion of all predictions that are correct.</li>
+                                                <li><strong>Precision</strong>: Of predicted positives, how many are truly positive (controls false alarms).</li>
+                                                <li><strong>Recall</strong>: Of actual positives, how many were found (controls misses).</li>
+                                                <li><strong>F1-Score</strong>: Harmonic mean of precision and recall; balances false alarms and misses.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-12">
+                                    <div class="card h-100">
+                                        <div class="card-header"><strong>🏅 What Makes a Model "Best"?</strong></div>
+                                        <div class="card-body">
+                                            <ul class="mb-0 guide-list">
+                                                <li><strong>Primary score</strong>: Highest key metric on validation (e.g., F1 for classification; RMSE/R² for regression).</li>
+                                                <li><strong>Generalization</strong>: Stable performance across folds; not just a single lucky split.</li>
+                                                <li><strong>Practicality</strong>: Reasonable training time and memory usage for your data size.</li>
+                                                <li><strong>Interpretability</strong>: Simpler models (Logistic/Tree) are easier to explain when needed.</li>
+                                            </ul>
+                                            <p class="mb-0 mt-2 text-muted">In this app, the "Best Model" is chosen by the top evaluation score among trained candidates for the detected task.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="footer text-center">
+                        Built with ❤️ for rapid ML experimentation.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentDataset = null;
+        let currentModels = {};
+        let currentTaskType = null;
+        let currentMetrics = {};
+
+        // File upload handling
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+        function handleFileUpload() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showLoading('Uploading and analyzing dataset...');
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    currentDataset = data.analysis;
+                    currentTaskType = data.analysis.task_type;
+                    displayDatasetInfo(data.analysis);
+                    showAlert('success', data.message);
+                    
+                    document.getElementById('trainingSetup').style.display = 'block';
+                    // Prefer top_features if provided; fallback to full columns
+                    const selectable = (data.analysis.top_features && data.analysis.top_features.length > 0)
+                        ? data.analysis.top_features
+                        : data.analysis.columns;
+                    populateTargetColumnSelect(selectable);
+                } else {
+                    showAlert('danger', data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showAlert('danger', 'Error uploading file: ' + error.message);
+            });
+        }
+
+        function displayDatasetInfo(analysis) {
+            document.getElementById('datasetInfo').style.display = 'block';
+            document.getElementById('datasetShape').textContent = `${analysis.shape[0]} × ${analysis.shape[1]}`;
+            document.getElementById('taskType').textContent = analysis.task_type;
+        }
+
+        function populateTargetColumnSelect(columns) {
+            const select = document.getElementById('targetColumn');
+            select.innerHTML = '<option value="">Select target column...</option>';
+            columns.forEach(col => {
+                const option = document.createElement('option');
+                option.value = col;
+                option.textContent = col;
+                select.appendChild(option);
+            });
+            // Rebuild feature inputs based on limited set (top 5)
+            populateFeatureInputs();
+        }
+
+        // Training functionality
+        document.getElementById('startTraining').addEventListener('click', startTraining);
+
+        function startTraining() {
+            const targetColumn = document.getElementById('targetColumn').value;
+            if (!targetColumn) {
+                showAlert('warning', 'Please select a target column');
+                return;
+            }
+
+            showLoading('Training models... This may take several minutes.');
+            document.getElementById('trainingProgress').style.display = 'block';
+            document.getElementById('trainingSetup').style.display = 'none';
+
+            fetch('/train', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ target_column: targetColumn })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    currentModels = data.results;
+                    currentMetrics = data.results;
+                    document.getElementById('trainingComplete').style.display = 'block';
+                    document.getElementById('trainingProgress').style.display = 'none';
+                    
+                    updateResultsTab();
+                    document.getElementById('predictionForm').style.display = 'block';
+                    document.getElementById('explanationContent').style.display = 'block';
+                    populateModelSelects();
+                    
+                    showAlert('success', 'Models trained successfully!');
+                } else {
+                    showAlert('danger', data.error);
+                    document.getElementById('trainingProgress').style.display = 'none';
+                    document.getElementById('trainingSetup').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showAlert('danger', 'Error training models: ' + error.message);
+                document.getElementById('trainingProgress').style.display = 'none';
+                document.getElementById('trainingSetup').style.display = 'block';
+            });
+        }
+
+        function updateResultsTab() {
+            if (Object.keys(currentMetrics).length === 0) {
+                document.getElementById('resultsContent').style.display = 'none';
+                document.getElementById('noResults').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('resultsContent').style.display = 'block';
+            document.getElementById('noResults').style.display = 'none';
+
+            let bestModel = '';
+            let bestScore = 0;
+            Object.entries(currentMetrics).forEach(([name, metrics]) => {
+                const score = currentTaskType === 'classification' ? metrics.f1_score : metrics.r2_score;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestModel = name;
+                }
+            });
+
+            document.getElementById('bestModel').textContent = bestModel;
+            document.getElementById('bestScore').textContent = bestScore.toFixed(4);
+
+            const tableBody = document.getElementById('modelTableBody');
+            tableBody.innerHTML = '';
+
+            Object.entries(currentMetrics).forEach(([name, metrics]) => {
+                const row = document.createElement('tr');
+                if (name === bestModel) {
+                    row.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+                }
+
+                row.innerHTML = `
+                    <td><strong>${name}</strong></td>
+                    <td>${metrics.accuracy ? metrics.accuracy.toFixed(4) : 'N/A'}</td>
+                    <td>${metrics.precision ? metrics.precision.toFixed(4) : 'N/A'}</td>
+                    <td>${metrics.recall ? metrics.recall.toFixed(4) : 'N/A'}</td>
+                    <td>${metrics.f1_score ? metrics.f1_score.toFixed(4) : 'N/A'}</td>
+                    <td>
+                        <a href="/download_model/${name}" class="btn btn-sm btn-success">
+                            📥 Download
+                        </a>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            createPerformanceChart();
+        }
+
+        function createPerformanceChart() {
+            const models = Object.keys(currentMetrics);
+            
+            // Colors for different models
+            const colors = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#fb7185'];
+            
+            // Create ROC curve data for each model
+            const data = models.map((model, idx) => {
+                const metrics = currentMetrics[model];
+                
+                // Calculate TPR and FPR from precision and recall
+                // TPR = Recall, FPR = 1 - Specificity
+                // For simplicity, we'll use precision as a proxy for specificity
+                const tpr = metrics.recall || 0;
+                const fpr = 1 - (metrics.precision || 0);
+                
+                // Create ROC curve points (simplified - in real implementation you'd need actual ROC data)
+                const rocPoints = [
+                    { x: 0, y: 0 },
+                    { x: fpr, y: tpr },
+                    { x: 1, y: 1 }
+                ];
+                
+                return {
+                    x: rocPoints.map(point => point.x),
+                    y: rocPoints.map(point => point.y),
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: model,
+                    line: { color: colors[idx % colors.length], width: 3 },
+                    marker: { color: colors[idx % colors.length], size: 8 }
+                };
+            });
+            
+            // Add diagonal line (random classifier)
+            data.push({
+                x: [0, 1],
+                y: [0, 1],
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Random Classifier',
+                line: { color: '#6b7280', width: 2, dash: 'dash' },
+                showlegend: true
+            });
+
+            const layout = {
+                title: { text: 'ROC Curve Comparison', font: { color: '#e5e7eb' } },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#e5e7eb' },
+                legend: { font: { color: '#e5e7eb' } },
+                xaxis: { 
+                    title: 'False Positive Rate', 
+                    gridcolor: 'rgba(255,255,255,.06)', 
+                    zerolinecolor: 'rgba(255,255,255,.08)',
+                    range: [0, 1]
+                },
+                yaxis: { 
+                    title: 'True Positive Rate', 
+                    gridcolor: 'rgba(255,255,255,.06)', 
+                    zerolinecolor: 'rgba(255,255,255,.08)',
+                    range: [0, 1]
+                },
+                height: 420,
+                showlegend: true
+            };
+
+            Plotly.newPlot('performanceChart', data, layout, { displayModeBar: false, responsive: true });
+        }
+
+        function populateModelSelects() {
+            const models = Object.keys(currentMetrics);
+            
+            const predictionSelect = document.getElementById('predictionModel');
+            predictionSelect.innerHTML = '<option value="best">Best Model (Recommended)</option>';
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                predictionSelect.appendChild(option);
+            });
+
+            const explanationSelect = document.getElementById('explanationModel');
+            explanationSelect.innerHTML = '<option value="">Select a model...</option>';
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                explanationSelect.appendChild(option);
+            });
+
+            populateFeatureInputs();
+        }
+
+        function populateFeatureInputs() {
+            if (!currentDataset) return;
+
+            const featureInputs = document.getElementById('featureInputs');
+            featureInputs.innerHTML = '<h6>Input Features:</h6>';
+            const targetVal = document.getElementById('targetColumn').value;
+
+            // Use only top_features if provided; else fallback to all columns
+            const featureCols = (currentDataset.top_features && currentDataset.top_features.length > 0)
+                ? currentDataset.top_features
+                : currentDataset.columns;
+
+            featureCols.forEach(col => {
+                if (col !== targetVal) {
+                    const inputDiv = document.createElement('div');
+                    inputDiv.className = 'mb-3';
+                    
+                    // Determine input type based on column name and data type
+                    let typeAttr = 'text';
+                    let placeholder = `Enter value for ${col}`;
+                    
+                    // Check if it's a numeric column
+                    if (['age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'slope', 'ca', 'thal'].includes(col.toLowerCase())) {
+                        typeAttr = 'number';
+                        placeholder = `Enter numeric value for ${col}`;
+                    }
+                    // Check if it's likely a text column (longer text content)
+                    else if (col.toLowerCase().includes('text') || col.toLowerCase().includes('description') || 
+                             col.toLowerCase().includes('comment') || col.toLowerCase().includes('review')) {
+                        typeAttr = 'textarea';
+                        placeholder = `Enter text content for ${col}`;
+                    }
+                    
+                    if (typeAttr === 'textarea') {
+                        inputDiv.innerHTML = `
+                            <label for="input_${col}" class="form-label">${col}</label>
+                            <textarea class="form-control" id="input_${col}" rows="3" placeholder="${placeholder}"></textarea>
+                        `;
+                    } else {
+                        inputDiv.innerHTML = `
+                            <label for="input_${col}" class="form-label">${col}</label>
+                            <input type="${typeAttr}" class="form-control" id="input_${col}" placeholder="${placeholder}">
+                        `;
+                    }
+                    featureInputs.appendChild(inputDiv);
+                }
+            });
+        }
+
+        // Prediction functionality
+        document.getElementById('makePrediction').addEventListener('click', makePrediction);
+
+        function makePrediction() {
+            const modelName = document.getElementById('predictionModel').value;
+            const inputData = {};
+
+            currentDataset.columns.forEach(col => {
+                if (col !== document.getElementById('targetColumn').value) {
+                    const input = document.getElementById(`input_${col}`);
+                    if (input) {
+                        const value = input.value.trim();
+                        if (value === '') {
+                            showAlert('warning', `Please enter a value for ${col}`);
+                            return;
+                        }
+                        inputData[col] = value;
+                    }
+                }
+            });
+
+            if (Object.keys(inputData).length === 0) {
+                showAlert('warning', 'Please enter feature values');
+                return;
+            }
+
+            showLoading('Making prediction...');
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    input_data: inputData,
+                    model_name: modelName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    displayPredictionResult(data);
+                } else {
+                    showAlert('danger', data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showAlert('danger', 'Error making prediction: ' + error.message);
+            });
+        }
+
+        function displayPredictionResult(data) {
+            const resultDiv = document.getElementById('predictionResult');
+            resultDiv.style.display = 'block';
+
+            if (data.task_type === 'classification') {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6>🎯 Classification Result</h6>
+                        <h3 class="text-center">${data.prediction}</h3>
+                        <p class="text-center">Predicted Class</p>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6>📊 Regression Result</h6>
+                        <h3 class="text-center">${data.prediction.toFixed(4)}</h3>
+                        <p class="text-center">Predicted Value</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Explanations functionality
+        document.getElementById('getExplanations').addEventListener('click', getExplanations);
+
+        function getExplanations() {
+            const modelName = document.getElementById('explanationModel').value;
+            if (!modelName) {
+                showAlert('warning', 'Please select a model');
+                return;
+            }
+
+            showLoading('Generating model explanations...');
+
+            fetch(`/explanations/${modelName}`)
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    displayExplanations(data.explanations, modelName);
+                } else {
+                    showAlert('danger', data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showAlert('danger', 'Error getting explanations: ' + error.message);
+            });
+        }
+
+        function displayExplanations(explanations, modelName) {
+            const resultDiv = document.getElementById('explanationsResult');
+            
+            let html = `<h6>Explanations for ${modelName}</h6>`;
+            
+            if (explanations.error) {
+                html += `<div class="alert alert-warning">${explanations.error}</div>`;
+            } else {
+                if (explanations.lime) {
+                    html += `
+                        <div class="alert alert-info">
+                            <h6>💡 LIME Explanation</h6>
+                            <p><strong>Prediction:</strong> ${explanations.lime.prediction}</p>
+                        </div>
+                    `;
+                }
+                
+                if (explanations.shap_values) {
+                    html += `
+                        <div class="alert alert-info">
+                            <h6>📊 SHAP Values Available</h6>
+                            <p>SHAP values show how each feature contributes to the prediction.</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+
+        // Utility functions
+        function showLoading(message) {
+            // Simple loading indicator
+            document.body.style.cursor = 'wait';
+        }
+
+        function hideLoading() {
+            document.body.style.cursor = 'default';
+        }
+
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.querySelector('.main-container').insertBefore(alertDiv, document.querySelector('.header'));
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+    </script>
+</body>
+</html>
